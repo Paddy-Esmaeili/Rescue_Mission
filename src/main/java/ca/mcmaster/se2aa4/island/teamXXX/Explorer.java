@@ -16,6 +16,7 @@ public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
     private Searcher searchMethod = new FindCoast();
+    private boolean coastFound = false;
 
     public void initialize(String s) {
         logger.info("** Initializing the Exploration Command Center");
@@ -24,14 +25,37 @@ public class Explorer implements IExplorerRaid {
     }
 
     public String takeDecision() {
+        if (!coastFound && searchMethod instanceof FindCoast) {
+            JSONObject decision = searchMethod.getDecision();
 
-        JSONObject decision = searchMethod.getDecision();
+            if ("stop".equals(decision.optString("action"))) {
+                logger.info("FindCoast completed. Switching to FindCreek.");
+                searchMethod = new FindCreek((FindCoast) searchMethod);
+                coastFound = true;
+                return new JSONObject().put("action", "wait").toString(); 
+            }
+            
+            return decision.toString();
+        } 
 
-        return decision.toString();
+        return searchMethod.getDecision().toString();
+    }
+
+    public boolean isComplete() {
+        if (searchMethod instanceof FindCoast) {
+            FindCoast findCoast = (FindCoast) searchMethod;
+            return findCoast.getLandFound() && findCoast.getGroundRange() != -1;
+        }
+        return false;
     }
 
     public void acknowledgeResults(String s) {
-        searchMethod.processResponse(s); 
+        searchMethod.processResponse(s);
+    
+        if (searchMethod instanceof FindCoast findCoast && findCoast.isComplete()) {
+            logger.info("Switching to FindCreek...");
+            searchMethod = ((FindCoast) searchMethod).getFindCreek();
+        }
     }
 
     public String deliverFinalReport() {
