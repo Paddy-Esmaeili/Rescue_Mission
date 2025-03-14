@@ -29,9 +29,15 @@ public class FindCoast implements Searcher {
     private final int MAX_OUT_OF_RANGE = 3;
     private int groundRange = -1;     //When a ground cell is found, this variable stores how many tiles ahead of the drone is the ground cell.
     
-    //Getter method
+    //Getter methods
     public int getGroundRange() {
         return groundRange;
+    }
+    public FindCreek getFindCreek() {
+        return findCreek;
+    }
+    public boolean isComplete() {
+        return landFound && groundRange != -1;
     }
 
     @Override
