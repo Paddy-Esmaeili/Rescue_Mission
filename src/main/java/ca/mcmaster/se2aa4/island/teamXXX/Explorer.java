@@ -44,7 +44,7 @@ public class Explorer implements IExplorerRaid {
     public boolean isComplete() {
         if (searchMethod instanceof FindCoast) {
             FindCoast findCoast = (FindCoast) searchMethod;
-            return findCoast.getLandFound() && findCoast.getGroundRange() != -1;
+            return findCoast.isLandFound() && findCoast.getGroundRange() != -1;
         }
         return false;
     }
