@@ -22,6 +22,7 @@ public class FindIsland implements Searcher {
     private int tilesToLand;
     private String landDirection;
     private boolean movingToLand = true;
+    private GridSearch gridSearch;
 
     public FindIsland(FindGround findGround) {
         this.findGround = findGround;
@@ -30,7 +31,7 @@ public class FindIsland implements Searcher {
     }
 
     public GridSearch gridSearch(){
-        return gridSearch();
+        return gridSearch;
     }
 
     @Override

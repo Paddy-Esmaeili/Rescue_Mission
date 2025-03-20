@@ -12,7 +12,7 @@ public enum Direction {
         this.character = character;
     }
 
-    public String getChar() {
+    public String toString() {
         return character;
     }
 

@@ -14,10 +14,20 @@ import org.json.JSONTokener;
 
 interface DirectionStrategy {
     DirectionStrategy getAlternativeDirection();
+    DirectionStrategy getLeftTurn();
+    DirectionStrategy getRightTurn();
     Direction getDirection();
 }
 
 class East implements DirectionStrategy {
+
+    public DirectionStrategy getLeftTurn() {
+        return new North(); 
+    }
+
+    public DirectionStrategy getRightTurn() {
+        return new South(); 
+    }
 
     public DirectionStrategy getAlternativeDirection() {
         return new South(); 
@@ -30,6 +40,14 @@ class East implements DirectionStrategy {
 
 class North implements DirectionStrategy {
 
+    public DirectionStrategy getLeftTurn() {
+        return new West(); 
+    }
+
+    public DirectionStrategy getRightTurn() {
+        return new East(); 
+    }
+
     public DirectionStrategy getAlternativeDirection() {
         return new East();
     }
@@ -40,6 +58,33 @@ class North implements DirectionStrategy {
 }
 
 class South implements DirectionStrategy {
+
+    public DirectionStrategy getLeftTurn() {
+        return new East(); 
+    }
+
+    public DirectionStrategy getRightTurn() {
+        return new West(); 
+    }
+
+    public DirectionStrategy getAlternativeDirection() {
+        return new North();
+    }
+
+    public Direction getDirection() {
+        return Direction.SOUTH;
+    }
+}
+
+class West implements DirectionStrategy {
+
+    public DirectionStrategy getLeftTurn() {
+        return new South(); 
+    }
+
+    public DirectionStrategy getRightTurn() {
+        return new North(); 
+    }
 
     public DirectionStrategy getAlternativeDirection() {
         return new North();
