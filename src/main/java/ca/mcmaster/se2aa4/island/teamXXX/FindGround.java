@@ -13,10 +13,10 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 //Locates land and then activates creek searching. 
-public class FindCoast implements Searcher {
+public class FindGround implements Searcher {
 
     private static final Logger logger = LogManager.getLogger();
-    private FindCreek findCreek;
+    private FindIsland findIsland;
     private DirectionStrategy currentDirection = new North();
     private boolean landFound = false;
     private String landDirection = "";
@@ -27,24 +27,25 @@ public class FindCoast implements Searcher {
 
     private int outOfRangeCount = 0;
     private final int MAX_OUT_OF_RANGE = 3;
-    private int groundRange = -1;     //When a ground cell is found, this variable stores how many tiles ahead of the drone is the ground cell.
+    private int groundRange = -1;  // Stores how many tiles ahead the ground cell is when found.
     
-    //Getter methods
+    // Getter methods
     public int getGroundRange() {
         return groundRange;
     }
-    public FindCreek getFindCreek() {
-        return findCreek;
+
+    public FindIsland getFindIsland() {
+        return findIsland;
     }
+
     public boolean isComplete() {
         return landFound && groundRange != -1;
     }
 
     @Override
     public JSONObject getDecision() {
-
-        if (findCreek != null){
-            return findCreek.getDecision();
+        if (findIsland != null) {
+            return findIsland.getDecision();
         }
 
         JSONObject decision = new JSONObject();
@@ -67,16 +68,11 @@ public class FindCoast implements Searcher {
 
     public String getNextDirection() {
         if (landFound && !stopIssued) {
-            //stopIssued = true;
-            logger.info("Ground found! Searching for creek now...");
+            logger.info("Ground found! Searching for island now...");
             return "scan";
         }
 
-        if (isFlyingEast) {
-            return Direction.EAST.getChar();
-        } else {
-            return currentDirection.getDirection().getChar();
-        }
+        return isFlyingEast ? Direction.EAST.getChar() : currentDirection.getDirection().getChar();
     }
 
     public boolean isFlyingEast() {
@@ -138,7 +134,7 @@ public class FindCoast implements Searcher {
                     logger.info("All directions are out of range. Starting to fly East.");
                 }
             } else if ("GROUND".equals(found) && !landFound) {
-                if (extraInfo.has("range")){
+                if (extraInfo.has("range")) {
                    groundRange = extraInfo.getInt("range");
                    logger.info("The first ground cell is {} tiles ahead", groundRange);
                 }
@@ -148,7 +144,7 @@ public class FindCoast implements Searcher {
                 isFlyingEast = false;
                 outOfRangeCount = 0;
                 tilesFlown = 0;
-                findCreek = new FindCreek(this);
+                findIsland = new FindIsland(this);
             }
         }
     }

@@ -15,8 +15,8 @@ import org.json.JSONTokener;
 public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
-    private Searcher searchMethod = new FindCoast();
-    private boolean coastFound = false;
+    private Searcher searchMethod = new FindGround();
+    private boolean groundFound = false;
 
     public void initialize(String s) {
         logger.info("** Initializing the Exploration Command Center");
@@ -25,13 +25,13 @@ public class Explorer implements IExplorerRaid {
     }
 
     public String takeDecision() {
-        if (!coastFound && searchMethod instanceof FindCoast) {
+        if (!groundFound && searchMethod instanceof FindGround) {
             JSONObject decision = searchMethod.getDecision();
 
             if ("stop".equals(decision.optString("action"))) {
-                logger.info("FindCoast completed. Switching to FindCreek.");
-                searchMethod = new FindCreek((FindCoast) searchMethod);
-                coastFound = true;
+                logger.info("FindGround completed. Switching to FindIsland.");
+                searchMethod = new FindIsland((FindGround) searchMethod);
+                groundFound = true;
                 return new JSONObject().put("action", "wait").toString(); 
             }
             
@@ -42,9 +42,9 @@ public class Explorer implements IExplorerRaid {
     }
 
     public boolean isComplete() {
-        if (searchMethod instanceof FindCoast) {
-            FindCoast findCoast = (FindCoast) searchMethod;
-            return findCoast.isLandFound() && findCoast.getGroundRange() != -1;
+        if (searchMethod instanceof FindGround) {
+            FindGround findGround = (FindGround) searchMethod;
+            return findGround.isLandFound() && findGround.getGroundRange() != -1;
         }
         return false;
     }
@@ -52,9 +52,9 @@ public class Explorer implements IExplorerRaid {
     public void acknowledgeResults(String s) {
         searchMethod.processResponse(s);
     
-        if (searchMethod instanceof FindCoast findCoast && findCoast.isComplete()) {
-            logger.info("Switching to FindCreek...");
-            searchMethod = ((FindCoast) searchMethod).getFindCreek();
+        if (searchMethod instanceof FindGround findGround && findGround.isComplete()) {
+            logger.info("Switching to FindIsland...");
+            searchMethod = ((FindGround) searchMethod).getFindIsland();
         }
     }
 
