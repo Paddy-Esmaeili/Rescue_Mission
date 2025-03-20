@@ -27,13 +27,6 @@ public class Explorer implements IExplorerRaid {
     public String takeDecision() {
         if (!groundFound && searchMethod instanceof FindGround) {
             JSONObject decision = searchMethod.getDecision();
-
-            if ("stop".equals(decision.optString("action"))) {
-                logger.info("FindGround completed. Switching to FindIsland.");
-                searchMethod = new FindIsland((FindGround) searchMethod);
-                groundFound = true;
-                return new JSONObject().put("action", "wait").toString(); 
-            }
             
             return decision.toString();
         } 
