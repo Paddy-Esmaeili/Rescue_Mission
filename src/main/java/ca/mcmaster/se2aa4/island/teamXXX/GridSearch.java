@@ -74,6 +74,11 @@ public class GridSearch implements Searcher {
         siteFound = false;
     }
 
+    @Override
+    public boolean isComplete() {
+        return creekFound && siteFound; 
+    }
+    
     public JSONObject getDecision() {
         return mode.getDecision(direction);
     }

@@ -30,8 +30,15 @@ public class FindIsland implements Searcher {
         this.landDirection = findGround.getLandDirection();
     }
 
-    public GridSearch gridSearch(){
+    public GridSearch getGridSearch(){
         return gridSearch;
+    }
+
+    /**
+     * Return true if the drone has reached the ground cell
+     */
+    public boolean isComplete() {
+        return !movingToLand;
     }
 
     @Override

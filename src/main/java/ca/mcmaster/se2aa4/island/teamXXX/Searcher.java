@@ -18,4 +18,6 @@ public interface Searcher {
 
     public abstract void processResponse(String responseString);
 
+    public abstract boolean isComplete();
+
 }
