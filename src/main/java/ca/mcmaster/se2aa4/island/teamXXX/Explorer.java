@@ -39,15 +39,20 @@ public class Explorer implements IExplorerRaid {
             FindGround findGround = (FindGround) searchMethod;
             return findGround.isLandFound() && findGround.getGroundRange() != -1;
         }
+
         return false;
     }
 
     public void acknowledgeResults(String s) {
         searchMethod.processResponse(s);
     
-        if (searchMethod instanceof FindGround findGround && findGround.isComplete()) {
+        if (searchMethod instanceof FindGround && searchMethod.isComplete()) {
             logger.info("Switching to FindIsland...");
             searchMethod = ((FindGround) searchMethod).getFindIsland();
+        }
+        else if (searchMethod instanceof FindIsland && searchMethod.isComplete()) {
+            logger.info("Switching to GridSearch...");
+            searchMethod = ((FindIsland) searchMethod).getGridSearch();
         }
     }
 

@@ -52,7 +52,7 @@ public class FindGround implements Searcher {
         JSONObject parameters = new JSONObject();
     
         if (isFlyingEast()) {
-            parameters.put("direction", Direction.EAST.getChar());
+            parameters.put("direction", Direction.EAST.toString());
             decision.put("action", "fly");
             incrementTilesFlown();
         } else {
@@ -72,7 +72,7 @@ public class FindGround implements Searcher {
             return "scan";
         }
 
-        return isFlyingEast ? Direction.EAST.getChar() : currentDirection.getDirection().getChar();
+        return isFlyingEast ? Direction.EAST.toString() : currentDirection.getDirection().toString();
     }
 
     public boolean isFlyingEast() {
@@ -139,7 +139,7 @@ public class FindGround implements Searcher {
                    logger.info("The first ground cell is {} tiles ahead", groundRange);
                 }
                 landFound = true;
-                landDirection = currentDirection.getDirection().getChar();
+                landDirection = currentDirection.getDirection().toString();
                 logger.info("Ground found in direction {}.", landDirection);
                 isFlyingEast = false;
                 outOfRangeCount = 0;

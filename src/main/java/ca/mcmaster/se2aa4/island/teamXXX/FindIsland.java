@@ -22,6 +22,7 @@ public class FindIsland implements Searcher {
     private int tilesToLand;
     private String landDirection;
     private boolean movingToLand = true;
+    private GridSearch gridSearch;
 
     public FindIsland(FindGround findGround) {
         this.findGround = findGround;
@@ -29,8 +30,15 @@ public class FindIsland implements Searcher {
         this.landDirection = findGround.getLandDirection();
     }
 
-    public GridSearch gridSearch(){
-        return gridSearch();
+    public GridSearch getGridSearch(){
+        return gridSearch;
+    }
+
+    /**
+     * Return true if the drone has reached the ground cell
+     */
+    public boolean isComplete() {
+        return !movingToLand;
     }
 
     @Override
