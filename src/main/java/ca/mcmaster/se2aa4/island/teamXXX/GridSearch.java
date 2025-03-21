@@ -87,6 +87,7 @@ public class GridSearch implements Searcher {
 
     public GridSearch(FindIsland island) {
         logger.info("Instantiating Grid Search. MODE: FLY");
+        direction = island.getLandDirection(); // Fetch directional data from island. 
         mode = Mode.FLY;
         creekFound = false;
         siteFound = false;

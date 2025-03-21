@@ -19,7 +19,6 @@ public class FindGround implements Searcher {
     private FindIsland findIsland;
     private DirectionStrategy currentDirection = new North();
     private boolean landFound = false;
-    private String landDirection = "";
     private boolean stopIssued = false; 
     
     private boolean isFlyingEast = false;
@@ -96,8 +95,8 @@ public class FindGround implements Searcher {
         return landFound;
     }
 
-    public String getLandDirection() {
-        return landDirection;
+    public DirectionStrategy getLandDirection() {
+        return currentDirection;
     }
 
     public boolean isStopIssued() {
@@ -139,8 +138,7 @@ public class FindGround implements Searcher {
                    logger.info("The first ground cell is {} tiles ahead", groundRange);
                 }
                 landFound = true;
-                landDirection = currentDirection.getDirection().toString();
-                logger.info("Ground found in direction {}.", landDirection);
+                logger.info("Ground found in direction {}.", currentDirection.getDirection().toString());
                 isFlyingEast = false;
                 outOfRangeCount = 0;
                 tilesFlown = 0;

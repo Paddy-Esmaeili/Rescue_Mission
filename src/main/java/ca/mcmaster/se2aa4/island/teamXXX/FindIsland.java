@@ -20,18 +20,22 @@ public class FindIsland implements Searcher {
     private static final Logger logger = LogManager.getLogger();
     private final FindGround findGround;
     private int tilesToLand;
-    private String landDirection;
+    private DirectionStrategy direction;
     private boolean movingToLand = true;
     private GridSearch gridSearch;
 
     public FindIsland(FindGround findGround) {
         this.findGround = findGround;
         this.tilesToLand = findGround.getGroundRange();
-        this.landDirection = findGround.getLandDirection();
+        this.direction = findGround.getLandDirection();
     }
 
     public GridSearch getGridSearch(){
         return gridSearch;
+    }
+
+    public DirectionStrategy getLandDirection() {
+        return direction;
     }
 
     /**
@@ -47,14 +51,13 @@ public class FindIsland implements Searcher {
         JSONObject parameters = new JSONObject();
 
         if (movingToLand) {
-            decision.put("heading", landDirection);
-            parameters.put("direction", landDirection);
+            parameters.put("direction", direction.toString());
             decision.put("action", "fly");
             tilesToLand--;
 
             if (tilesToLand <= 0) {
                 movingToLand = false;
-                logger.info("Arrived at ground cell! Stopping.");
+                logger.info("Arrived at ground cell! Stopping and preparing for Grid Search!.");
                 gridSearch = new GridSearch(this);
             }
         }
