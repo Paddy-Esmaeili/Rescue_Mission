@@ -17,12 +17,15 @@ public class FindGround implements Searcher {
 
     private static final Logger logger = LogManager.getLogger();
     private FindIsland findIsland;
-    private DirectionStrategy currentDirection = new North();
     private boolean landFound = false;
     private boolean stopIssued = false; 
     
     private boolean isFlyingEast = false;
     private int tilesFlown = 0;
+
+    // DIRECTIONAL DATA
+    private DirectionStrategy scanDirection = new North();
+    private DirectionStrategy landDirection = null;
 
     private int outOfRangeCount = 0;
     private final int MAX_OUT_OF_RANGE = 3;
@@ -36,6 +39,11 @@ public class FindGround implements Searcher {
     public FindIsland getFindIsland() {
         return findIsland;
     }
+
+    public DirectionStrategy getLandDirection() {
+        return landDirection;
+    }
+
 
     public boolean isComplete() {
         return landFound && groundRange != -1;
@@ -71,7 +79,7 @@ public class FindGround implements Searcher {
             return "scan";
         }
 
-        return isFlyingEast ? Direction.EAST.toString() : currentDirection.getDirection().toString();
+        return isFlyingEast ? Direction.EAST.toString() : scanDirection.getDirection().toString();
     }
 
     public boolean isFlyingEast() {
@@ -86,17 +94,13 @@ public class FindGround implements Searcher {
             tilesFlown = 0;
             outOfRangeCount = 0;
             isFlyingEast = false;
-            currentDirection = new North();
+            scanDirection = new North();
             logger.info("Completed 3 tiles East. Echoing all directions again.");
         }
     }
 
     public boolean isLandFound() {
         return landFound;
-    }
-
-    public DirectionStrategy getLandDirection() {
-        return currentDirection;
     }
 
     public boolean isStopIssued() {
@@ -125,7 +129,7 @@ public class FindGround implements Searcher {
             if ("OUT_OF_RANGE".equals(found)) {
                 outOfRangeCount++;
                 logger.warn("Object is out of range.");
-                currentDirection = currentDirection.getAlternativeDirection();
+                scanDirection = scanDirection.getAlternativeDirection();
 
                 if (outOfRangeCount >= MAX_OUT_OF_RANGE && !isFlyingEast) {
                     isFlyingEast = true;
@@ -138,7 +142,8 @@ public class FindGround implements Searcher {
                    logger.info("The first ground cell is {} tiles ahead", groundRange);
                 }
                 landFound = true;
-                logger.info("Ground found in direction {}.", currentDirection.getDirection().toString());
+                logger.info("Ground found in direction {}.", scanDirection.toString());
+                landDirection = scanDirection;
                 isFlyingEast = false;
                 outOfRangeCount = 0;
                 tilesFlown = 0;

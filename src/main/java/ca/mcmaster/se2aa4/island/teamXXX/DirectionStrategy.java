@@ -17,6 +17,7 @@ interface DirectionStrategy {
     DirectionStrategy getLeftTurn();
     DirectionStrategy getRightTurn();
     Direction getDirection();
+    String toString();
 }
 
 class East implements DirectionStrategy {
@@ -35,6 +36,10 @@ class East implements DirectionStrategy {
 
     public Direction getDirection() {
         return Direction.EAST;
+    }
+
+    public String toString() {
+        return Direction.EAST.toString();
     }
 }
 
@@ -55,6 +60,10 @@ class North implements DirectionStrategy {
     public Direction getDirection() {
         return Direction.NORTH;
     }
+
+    public String toString() {
+        return Direction.NORTH.toString();
+    }
 }
 
 class South implements DirectionStrategy {
@@ -74,6 +83,10 @@ class South implements DirectionStrategy {
     public Direction getDirection() {
         return Direction.SOUTH;
     }
+
+    public String toString() {
+        return Direction.SOUTH.toString();
+    }
 }
 
 class West implements DirectionStrategy {
@@ -91,6 +104,10 @@ class West implements DirectionStrategy {
     }
 
     public Direction getDirection() {
-        return Direction.SOUTH;
+        return Direction.WEST;
+    }
+
+    public String toString() {
+        return Direction.WEST.toString();
     }
 }

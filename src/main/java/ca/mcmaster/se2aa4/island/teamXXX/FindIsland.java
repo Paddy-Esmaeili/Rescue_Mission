@@ -50,19 +50,25 @@ public class FindIsland implements Searcher {
         JSONObject decision = new JSONObject();
         JSONObject parameters = new JSONObject();
 
-        if (movingToLand) {
+        if (!Direction.EAST.toString().equals(direction.toString())) {
+            logger.info("TURNING TO ISLAND DIRECTION: " + direction.toString());
             parameters.put("direction", direction.toString());
-            decision.put("action", "fly");
+            decision.put("action", "heading");
+            decision.put("parameters", parameters);
             tilesToLand--;
+        }
+        else if (movingToLand) {
+            decision.put("action", "fly");
+            tilesToLand--;    
+        }
 
-            if (tilesToLand <= 0) {
+        if (tilesToLand <= 0) {
                 movingToLand = false;
                 logger.info("Arrived at ground cell! Stopping and preparing for Grid Search!.");
                 gridSearch = new GridSearch(this);
-            }
+        
         }
 
-        decision.put("parameters", parameters);
         logger.info("Decision: {}", decision.toString());
         return decision;
     }
