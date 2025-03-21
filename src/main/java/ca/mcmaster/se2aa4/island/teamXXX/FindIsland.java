@@ -51,6 +51,7 @@ public class FindIsland implements Searcher {
         JSONObject parameters = new JSONObject();
 
         if (movingToLand) {
+            decision.put("heading", direction.toString());
             parameters.put("direction", direction.toString());
             decision.put("action", "fly");
             tilesToLand--;
