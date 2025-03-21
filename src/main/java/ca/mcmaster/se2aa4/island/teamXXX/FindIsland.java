@@ -22,6 +22,7 @@ public class FindIsland implements Searcher {
     private int tilesToLand;
     private DirectionStrategy direction;
     private boolean movingToLand = true;
+    private boolean headingChanged = false; //Tracks changes in the heading 
     private GridSearch gridSearch;
 
     public FindIsland(FindGround findGround) {
@@ -50,23 +51,22 @@ public class FindIsland implements Searcher {
         JSONObject decision = new JSONObject();
         JSONObject parameters = new JSONObject();
 
-        if (!Direction.EAST.toString().equals(direction.toString())) {
+        if (!headingChanged) { //Change heading only once before flying 
             logger.info("TURNING TO ISLAND DIRECTION: " + direction.toString());
             parameters.put("direction", direction.toString());
             decision.put("action", "heading");
             decision.put("parameters", parameters);
-            tilesToLand--;
-        }
+            headingChanged = true; //The heading has been updated. 
+        } 
         else if (movingToLand) {
             decision.put("action", "fly");
             tilesToLand--;    
         }
 
         if (tilesToLand <= 0) {
-                movingToLand = false;
-                logger.info("Arrived at ground cell! Stopping and preparing for Grid Search!.");
-                gridSearch = new GridSearch(this);
-        
+            movingToLand = false;
+            logger.info("Arrived at ground cell! Stopping and preparing for Grid Search!.");
+            gridSearch = new GridSearch(this);
         }
 
         logger.info("Decision: {}", decision.toString());
