@@ -193,5 +193,4 @@ public class GridSearch implements Searcher, ResponseProcessor{
         //Check biomes and change course if the drone is surrounded by water. 
 
     }
-
 }
