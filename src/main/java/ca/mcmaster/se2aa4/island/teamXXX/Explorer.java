@@ -15,8 +15,16 @@ import org.json.JSONTokener;
 public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
-    private Searcher searchMethod = new FindGround();
-    private boolean groundFound = false;
+    private Searcher searchMethod;    
+    private ResponseProcessor responseProcessor;
+
+    public Explorer() {
+
+        FindGround initialSearch = new FindGround();
+        this.searchMethod = initialSearch;
+        this.responseProcessor = initialSearch;
+
+    }
 
     public void initialize(String s) {
         logger.info("** Initializing the Exploration Command Center");
@@ -25,34 +33,29 @@ public class Explorer implements IExplorerRaid {
     }
 
     public String takeDecision() {
-        if (!groundFound && searchMethod instanceof FindGround) {
-            JSONObject decision = searchMethod.getDecision();
-            
-            return decision.toString();
-        } 
-
         return searchMethod.getDecision().toString();
     }
 
     public boolean isComplete() {
-        if (searchMethod instanceof FindGround) {
-            FindGround findGround = (FindGround) searchMethod;
-            return findGround.isLandFound() && findGround.getGroundRange() != -1;
-        }
-
-        return false;
+        return searchMethod.isComplete();
     }
 
     public void acknowledgeResults(String s) {
-        searchMethod.processResponse(s);
-    
-        if (searchMethod instanceof FindGround && searchMethod.isComplete()) {
-            logger.info("Switching to FindIsland...");
-            searchMethod = ((FindGround) searchMethod).getFindIsland();
+        if (responseProcessor != null) {
+            responseProcessor.processResponse(s);
         }
-        else if (searchMethod instanceof FindIsland && searchMethod.isComplete()) {
-            logger.info("Switching to GridSearch...");
-            searchMethod = ((FindIsland) searchMethod).getGridSearch();
+
+        if (searchMethod.isComplete()) {
+            if (searchMethod instanceof FindGround) {
+                logger.info("Switching to FindIsland...");
+                searchMethod = ((FindGround) searchMethod).getFindIsland();
+                responseProcessor = null; 
+            } 
+            else if (searchMethod instanceof FindIsland) {
+                logger.info("Switching to GridSearch...");
+                searchMethod = ((FindIsland) searchMethod).getGridSearch();
+                responseProcessor = (ResponseProcessor) searchMethod; 
+            }
         }
     }
 

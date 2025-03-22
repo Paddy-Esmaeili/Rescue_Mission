@@ -12,11 +12,8 @@ import eu.ace_design.island.bot.IExplorerRaid;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-public interface Searcher {
+public interface ResponseProcessor{
 
-    public abstract JSONObject getDecision();
-
-    public abstract boolean isComplete();
-
+    public abstract void processResponse(String responseString);
+    
 }
-

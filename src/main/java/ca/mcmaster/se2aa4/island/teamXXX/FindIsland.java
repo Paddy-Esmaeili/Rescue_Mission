@@ -65,16 +65,11 @@ public class FindIsland implements Searcher {
 
         if (tilesToLand <= 0) {
             movingToLand = false;
-            logger.info("Arrived at ground cell! Stopping and preparing for Grid Search!.");
+            logger.info("Arrived at ground cell! Stopping and preparing for GridSearch!.");
             gridSearch = new GridSearch(this);
         }
 
         logger.info("Decision: {}", decision.toString());
         return decision;
-    }
-
-    @Override
-    public void processResponse(String responseString) {
-        //We don't need to use this method
     }
 }

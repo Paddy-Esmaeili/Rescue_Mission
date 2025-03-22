@@ -24,7 +24,7 @@ import ca.mcmaster.se2aa4.island.teamXXX.Direction;
  * 
  * Rosemarie Collier
  */
-public class GridSearch implements Searcher {
+public class GridSearch implements Searcher, ResponseProcessor{
 
     private static final Logger logger = LogManager.getLogger(); 
     private DirectionStrategy direction; 
