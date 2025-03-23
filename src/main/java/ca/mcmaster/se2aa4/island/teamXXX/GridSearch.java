@@ -29,46 +29,53 @@ public class GridSearch implements Searcher, ResponseProcessor{
     private static final Logger logger = LogManager.getLogger(); 
     private DirectionStrategy direction; 
     private Mode mode; // Action modes.
+    private Direction scanDirection;
 
     // Search Status Flags
+    private boolean turnRequested;
     private boolean creekFound;
     private boolean siteFound;
+
+    // Storage for CREEK IDS
+    private String creekIDs;
+    private String siteIDs;
 
     /**
      * Mode
      * An enumeration of all potential action types.
      * FLY - Move forward one space
      * SCAN - Scan surroundings
-     * CONTINUE - After scanning, move forward one space.
      * RIGHT TURN - Turn right relative to the current direction
      * LEFT TURN - Turn left relative to the current direction
+     * STOP - Send a signal to stop the game.
      */
     private enum Mode {
-        FLY("action", "fly", "FLY"),
-        SCAN("action", "scan", "SCAN"),
-        CONTINUE("action", "fly", "CONTINUE"),
-        RIGHT_TURN("action", "heading", "RIGHT_TURN"),
-        LEFT_TURN("action", "heading", "LEFT_TURN"),
-        STOP ("action", "stop", "STOP");
+        FLY("action", "fly", 3),
+        SCAN("action", "scan",1),
+        RIGHT_TURN("action", "heading",2),
+        LEFT_TURN("action", "heading",2),
+        STOP ("action", "stop",1);
 
         private String type; // Action key
         private String item; // Action item
-        private String str; // String description for logging. Dont use if not needed
+        private int iterations; // Number of times this action has been made consecutively
+        private int maxIterations; // Number of times this action has been made consecutively
         private static final Logger logger = LogManager.getLogger();
 
         // Construct modes
-        Mode(String type, String item, String str) {
+        Mode(String type, String item, int maxIterations) {
             this.type = type;
             this.item = item;
-            this.str = str; // Unused as of now. Exists if logging is needed.
+            this.maxIterations = maxIterations;
+            this.iterations = 0;
         }
 
-        /**
-         * Get the mode in string form for log messages
-         * Remove this later if not needed.
-         */
-        public String toString() {
-            return str;
+        private void resetIterations() {
+            iterations = 0;
+        }
+
+        private int getIterations() {
+            return iterations;
         }
 
         /**
@@ -90,11 +97,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
                 parameters.put("direction", direction.getRightTurn().toString());
                 decision.put("parameters", parameters);
             }
-            else if (this == FLY || this == CONTINUE) {
-                logger.info("Selected Fly Forward");
-                parameters.put("direction", direction.toString());
-                decision.put("parameters", parameters);
-            }
+            
+            this.iterations++;
             return decision;
         }
 
@@ -106,9 +110,12 @@ public class GridSearch implements Searcher, ResponseProcessor{
     public GridSearch(FindIsland island) {
         logger.info("Instantiating Grid Search. MODE: SCAN");
         direction = island.getLandDirection(); // Fetch directional data from island. 
+        scanDirection = Direction.EAST;
         mode = Mode.SCAN;
         creekFound = false;
         siteFound = false;
+        turnRequested = false;
+
     }
 
     /**
@@ -132,16 +139,32 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * Switch decision modes based on the results of the previous action.
      */
     public Mode switchMode() {
-        if (mode == Mode.FLY) {
-            logger.info("Switching to SCAN mode");
-            return Mode.SCAN;
+        if (turnRequested) {
+            logger.info("MAKING. TURN DIRECTION: " + scanDirection.toString());
+            if (mode.getIterations() == 2) {
+                mode.resetIterations();
+                turnRequested = false;
+                return Mode.FLY;
+            } 
+            else if (scanDirection == Direction.EAST) {
+                return Mode.RIGHT_TURN;
+            }
+            else {
+                return Mode.LEFT_TURN;
+            }
+        }
+        else if (mode == Mode.FLY) {
+            if (mode.getIterations() == 2){
+                mode.resetIterations();
+                return Mode.SCAN;
+            }
+            else {
+                return Mode.FLY;
+            }  
         }
         else if (mode == Mode.SCAN) {
             logger.info("Scan evaluation complete. Proceeding in CONTINUE mode");
-            return Mode.CONTINUE;
-        }
-        else if (mode == Mode.CONTINUE) {
-            logger.info("Switching to FLY mode");
+            mode.resetIterations();
             return Mode.FLY;
         }
         else 
@@ -177,21 +200,41 @@ public class GridSearch implements Searcher, ResponseProcessor{
     public void checkScan(JSONObject data) {
         logger.info("Evaluating SCAN data");
 
-        //Check for creeks and set flags. 
-        if (data.has("creeks")) {
-            logger.info("Check for creeks.");
-            JSONArray creeks = data.getJSONArray("creeks");
-
-            
-        }
-        //Check for emergency sites and set flags. 
-        if (data.has("sites")) {
-            logger.info("Check for emergency sites.");
-            JSONArray sites = data.getJSONArray("sites");
-        }
+        creekIDs = searchFor(data, "creeks", creekFound);
+        siteIDs = searchFor(data, "sites", creekFound);
 
         //Check biomes and change course if the drone is surrounded by water. 
+        if (data.has("biomes")) {
+            logger.info("Evaluating surroundings.");
+            JSONArray biomes = data.getJSONArray("biomes");
+            
+            // If WATER is the only biome, turn around.
+            if (biomes.length() == 1) {
+                if (biomes.get(0).equals("OCEAN")) {
+                    logger.info("SURROUNDED BY WATER. COMMENCE U-TURN");
+                    turnRequested = true;
+                }
+            }
+        }
+    }
 
+    /**
+     * Search for an item in a JSON array
+     */
+    public String searchFor(JSONObject data, String area, boolean statusFlag) {
+        if (data.has(area)) {
+            logger.info("Check for " + area);
+            JSONArray areaReport = data.getJSONArray(area);
+
+            if (areaReport.length() != 0) {
+                logger.info("============ DISCOVERY: " + area + " HAS BEEN FOUND ============");
+                statusFlag = true;
+                return (String)areaReport.get(0);
+            }
+            logger.info("NO " + area + " HAVE BEEN FOUND");
+
+        }
+        return null;
     }
 
 }
