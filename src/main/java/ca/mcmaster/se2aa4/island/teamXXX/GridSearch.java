@@ -27,9 +27,9 @@ import ca.mcmaster.se2aa4.island.teamXXX.Direction;
 public class GridSearch implements Searcher, ResponseProcessor{
 
     private static final Logger logger = LogManager.getLogger(); 
-    private DirectionStrategy direction; 
+    private DirectionStrategy direction; // The direction the drone is CURRENTLY FACING
     private Mode mode; // Action modes.
-    private Direction scanDirection;
+    private Direction scanDirection; // The direction in which the drone is sweeping.
 
     // Search Status Flags
     private boolean turnRequested;
@@ -50,24 +50,28 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * STOP - Send a signal to stop the game.
      */
     private enum Mode {
-        FLY("action", "fly", 3),
-        SCAN("action", "scan",1),
-        RIGHT_TURN("action", "heading",2),
-        LEFT_TURN("action", "heading",2),
-        STOP ("action", "stop",1);
+        FLY("action", "fly", "FLY"),
+        SCAN("action", "scan", "SCAN"),
+        RIGHT_TURN("action", "heading", "RIGHT TURN"),
+        LEFT_TURN("action", "heading", "LEFT TURN"),
+        STOP ("action", "stop", "STOP");
 
         private String type; // Action key
         private String item; // Action item
         private int iterations; // Number of times this action has been made consecutively
-        private int maxIterations; // Number of times this action has been made consecutively
+        private String str; // Text for console logging
         private static final Logger logger = LogManager.getLogger();
 
         // Construct modes
-        Mode(String type, String item, int maxIterations) {
+        Mode(String type, String item, String str) {
             this.type = type;
             this.item = item;
-            this.maxIterations = maxIterations;
+            this.str = str;
             this.iterations = 0;
+        }
+
+        private String getString() {
+            return str;
         }
 
         private void resetIterations() {
@@ -108,14 +112,25 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * Instantiate grid search.
      */
     public GridSearch(FindIsland island) {
-        logger.info("Instantiating Grid Search. MODE: SCAN");
+        logger.info("===== GRID SEARCH INSTANTIATED =====");
         direction = island.getLandDirection(); // Fetch directional data from island. 
         scanDirection = Direction.EAST;
         mode = Mode.SCAN;
         creekFound = false;
         siteFound = false;
         turnRequested = false;
+    }
 
+    /**
+     * Exists for console logging. 
+     * Prints the status of the grid search.
+     */
+    private void printStatus(JSONObject decision) {
+        logger.info("===== GRID SEARCH ====="
+                    + "\n\t\tDIRECTION - " + direction.toString() 
+                    + "\n\t\tSCAN DIRECTION - " + scanDirection.toString()
+                    + "\n\t\tACTION MODE - " + mode.getString()
+                    + "\n\t\tDecision: {}", decision.toString());
     }
 
     /**
@@ -131,7 +146,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public JSONObject getDecision() {
         JSONObject decision = mode.getDecision(direction);
-        logger.info("Decision: {}", decision.toString());
+        direction = updateDirection();
+        printStatus(decision);
         return decision;
     }
 
@@ -140,35 +156,47 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public Mode switchMode() {
         if (turnRequested) {
-            logger.info("MAKING. TURN DIRECTION: " + scanDirection.toString());
             if (mode.getIterations() == 2) {
+                logger.info("TURN COMPLETE. Proceed to FLY.");
                 mode.resetIterations();
                 turnRequested = false;
                 return Mode.FLY;
             } 
             else if (scanDirection == Direction.EAST) {
+                logger.info("SCAN DIRECTION RIGHT - TURN RIGHT.");
                 return Mode.RIGHT_TURN;
             }
             else {
+                logger.info("SCAN DIRECTION LEFT - TURN LEFT.");
                 return Mode.LEFT_TURN;
             }
         }
         else if (mode == Mode.FLY) {
-            if (mode.getIterations() == 2){
-                mode.resetIterations();
+                logger.info("FLIGHT COMPLETE - SCAN.");
                 return Mode.SCAN;
-            }
-            else {
-                return Mode.FLY;
-            }  
         }
         else if (mode == Mode.SCAN) {
-            logger.info("Scan evaluation complete. Proceeding in CONTINUE mode");
-            mode.resetIterations();
+            logger.info("Scan evaluation complete. Proceed to FLY.");
             return Mode.FLY;
         }
         else 
             return null;
+    }
+
+    /**
+     * Update the stored value of the drone's heading if it is changed. 
+     * Return the direction to be changed to.
+     */
+    public DirectionStrategy updateDirection() {
+            if (mode == Mode.LEFT_TURN) {
+                return direction.getLeftTurn();
+            }
+            else if (mode == Mode.RIGHT_TURN) {
+                return direction = direction.getRightTurn();
+            }
+            else {
+                return direction;
+            }
     }
 
     /**
@@ -190,7 +218,6 @@ public class GridSearch implements Searcher, ResponseProcessor{
         if (mode == Mode.SCAN) {
             checkScan(extraInfo);
         }
-
         mode = switchMode();
     }
 
@@ -209,7 +236,7 @@ public class GridSearch implements Searcher, ResponseProcessor{
             JSONArray biomes = data.getJSONArray("biomes");
             
             // If WATER is the only biome, turn around.
-            if (biomes.length() == 1) {
+            if (biomes.length() == 1 && !turnRequested) {
                 if (biomes.get(0).equals("OCEAN")) {
                     logger.info("SURROUNDED BY WATER. COMMENCE U-TURN");
                     turnRequested = true;
