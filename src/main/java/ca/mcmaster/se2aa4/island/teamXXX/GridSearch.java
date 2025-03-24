@@ -122,8 +122,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
         creekFound = false;
         siteFound = false;
         turnRequested = false;
-        maxIslandHeight = 0;
-        onLand = true;
+        maxIslandHeight = 2; //Maximum known island height
+        onLand = false;
     }
 
     /**
@@ -248,26 +248,49 @@ public class GridSearch implements Searcher, ResponseProcessor{
 
         creekIDs = searchFor(data, "creeks", creekFound);
         siteIDs = searchFor(data, "sites", creekFound);
-
-        //Check biomes and change course if the drone is surrounded by water. 
+        //Check biomes and change course if the drone is surrounded by water.         
         if (data.has("biomes")) {
             logger.info("Evaluating surroundings.");
             JSONArray biomes = data.getJSONArray("biomes");
-            
-            // If WATER is the only biome, turn around.
-            if (biomes.length() == 1 && !turnRequested) {
-                if (biomes.get(0).equals("OCEAN")) {
-                    logger.info("SURROUNDED BY WATER. COMMENCE U-TURN");
-                    if (mode.getIterations() > maxIslandHeight) {
-                        maxIslandHeight = mode.getIterations();
-                    }
-                    onLand = false;
+            evaluateBiomes(biomes);
+        }
+    }
+
+    /**
+     * Evaluate the biomes
+     * This method is very long. 
+     * Consider refactoring in the future. 
+     * This violates open-closed. 
+     */
+    public void evaluateBiomes(JSONArray biomes) {
+        // If WATER is the only biome, turn around.
+        if (biomes.length() == 1 && !turnRequested) {
+            if (biomes.get(0).equals("OCEAN")) {
+                logger.info("SURROUNDED BY WATER.");
+                int tilesMoved = mode.getIterations(); // How many tiles have we travelled in a straight line?
+
+                // Decide if a turn is required. 
+                if (onLand) {
+                    // We were on land previously and just encountered water! Turn around.
                     turnRequested = true;
+                    onLand = false;
+
+                    // If the tiles moved is greater than the previously known island height
+                    if (tilesMoved > maxIslandHeight) {
+                        maxIslandHeight = tilesMoved;
+                    }
+                    mode.resetIterations();
+                }
+                //If we have surpassed the island height by going straight we must make a u-turn
+                else if (tilesMoved > maxIslandHeight) {
+                    turnRequested = true;
+                    previousTurn = switchTurns(); // Swap turns. Turn in opposite direction.
                 }
             }
-            else {
-                onLand = true;
-            }
+        }
+        else {
+            // We are not on water. Thus, we are on land. 
+            onLand = true;
         }
     }
 

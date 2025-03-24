@@ -13,8 +13,8 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 public class Battery {
-    public static final int BATTERY_CAPACITY = 7000;
-    public static final int LOW_BATTERY = 500;
+    public static final int BATTERY_CAPACITY = 35000;
+    public static final int LOW_BATTERY = 29000;
     public int batteryLevel;
     private static final Logger logger = LogManager.getLogger();
 
