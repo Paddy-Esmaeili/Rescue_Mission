@@ -16,13 +16,14 @@ public class Explorer implements IExplorerRaid {
 
     private final Logger logger = LogManager.getLogger();
     private Searcher searchMethod;    
+    private Battery battery;
     private ResponseProcessor responseProcessor;
 
     public Explorer() {
-
         FindGround initialSearch = new FindGround();
         this.searchMethod = initialSearch;
         this.responseProcessor = initialSearch;
+        this.battery = new Battery();
 
     }
 
@@ -33,7 +34,18 @@ public class Explorer implements IExplorerRaid {
     }
 
     public String takeDecision() {
-        return searchMethod.getDecision().toString();
+        JSONObject decision = searchMethod.getDecision();
+        if (battery.hasCapacity()) {
+            return decision.toString();
+        }
+        else {
+            // Stop and return home if there is no battery!
+            logger.info("LOW BATTERY. STOPPING.");
+            decision = new JSONObject();
+            decision.put("action", "stop");
+            return decision.toString();
+        }
+
     }
 
     public boolean isComplete() {
@@ -42,6 +54,7 @@ public class Explorer implements IExplorerRaid {
 
     public void acknowledgeResults(String s) {
         if (responseProcessor != null) {
+            battery.depleteBattery(s);
             responseProcessor.processResponse(s);
         }
 

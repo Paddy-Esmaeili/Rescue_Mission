@@ -13,7 +13,7 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 //Locates land and then activates creek searching. 
-public class FindGround implements Searcher, ResponseProcessor{
+public class FindGround implements Searcher, ResponseProcessor {
 
     private static final Logger logger = LogManager.getLogger();
     private FindIsland findIsland;
