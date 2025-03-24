@@ -29,12 +29,15 @@ public class GridSearch implements Searcher, ResponseProcessor{
     private static final Logger logger = LogManager.getLogger(); 
     private DirectionStrategy direction; // The direction the drone is CURRENTLY FACING
     private Mode mode; // Action modes.
-    private Direction scanDirection; // The direction in which the drone is sweeping.
+    private Mode previousTurn; // The Turn Direction the Drone Previously Made
 
     // Search Status Flags
     private boolean turnRequested;
+    private boolean onLand; // Track if the drone is on land after a turn
     private boolean creekFound;
     private boolean siteFound;
+
+    private int maxIslandHeight; //Maximum height of island.
 
     // Storage for CREEK IDS
     private String creekIDs;
@@ -114,11 +117,13 @@ public class GridSearch implements Searcher, ResponseProcessor{
     public GridSearch(FindIsland island) {
         logger.info("===== GRID SEARCH INSTANTIATED =====");
         direction = island.getLandDirection(); // Fetch directional data from island. 
-        scanDirection = Direction.EAST;
+        previousTurn = Mode.RIGHT_TURN;
         mode = Mode.SCAN;
         creekFound = false;
         siteFound = false;
         turnRequested = false;
+        maxIslandHeight = 0;
+        onLand = true;
     }
 
     /**
@@ -128,7 +133,7 @@ public class GridSearch implements Searcher, ResponseProcessor{
     private void printStatus(JSONObject decision) {
         logger.info("===== GRID SEARCH ====="
                     + "\n\t\tDIRECTION - " + direction.toString() 
-                    + "\n\t\tSCAN DIRECTION - " + scanDirection.toString()
+                    + "\n\t\tPREVIOUS TURN - " + previousTurn.getString()
                     + "\n\t\tACTION MODE - " + mode.getString()
                     + "\n\t\tDecision: {}", decision.toString());
     }
@@ -159,15 +164,16 @@ public class GridSearch implements Searcher, ResponseProcessor{
             if (mode.getIterations() == 2) {
                 logger.info("TURN COMPLETE. Proceed to FLY.");
                 mode.resetIterations();
+                previousTurn = switchTurns();
                 turnRequested = false;
                 return Mode.FLY;
             } 
-            else if (scanDirection == Direction.EAST) {
-                logger.info("SCAN DIRECTION RIGHT - TURN RIGHT.");
+            else if (previousTurn == Mode.LEFT_TURN) {
+                logger.info("PREVIOUSLY TURNED LEFT - TURN RIGHT.");
                 return Mode.RIGHT_TURN;
             }
             else {
-                logger.info("SCAN DIRECTION LEFT - TURN LEFT.");
+                logger.info("PREVIOUSLY TURNED RIGHT - TURN LEFT.");
                 return Mode.LEFT_TURN;
             }
         }
@@ -197,6 +203,19 @@ public class GridSearch implements Searcher, ResponseProcessor{
             else {
                 return direction;
             }
+    }
+
+    /**
+     * Return the alternate turn value
+     */
+    private Mode switchTurns() {
+        // Log previous turn
+        if (previousTurn == Mode.LEFT_TURN) {
+            return Mode.RIGHT_TURN;
+        }
+        else {
+            return Mode.LEFT_TURN;
+        }
     }
 
     /**
@@ -239,8 +258,15 @@ public class GridSearch implements Searcher, ResponseProcessor{
             if (biomes.length() == 1 && !turnRequested) {
                 if (biomes.get(0).equals("OCEAN")) {
                     logger.info("SURROUNDED BY WATER. COMMENCE U-TURN");
+                    if (mode.getIterations() > maxIslandHeight) {
+                        maxIslandHeight = mode.getIterations();
+                    }
+                    onLand = false;
                     turnRequested = true;
                 }
+            }
+            else {
+                onLand = true;
             }
         }
     }
