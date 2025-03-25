@@ -35,6 +35,15 @@ public class Explorer implements IExplorerRaid {
 
     public String takeDecision() {
         JSONObject decision = searchMethod.getDecision();
+
+        if (searchMethod instanceof GridSearch) {
+            if (((GridSearch) searchMethod).isComplete()) {
+                logger.info("SEARCH IS COMPLETE. RETURN HOME.");
+                decision.put("action", "stop");
+                return decision.toString();
+            }
+        }
+
         if (battery.hasCapacity()) {
             return decision.toString();
         }

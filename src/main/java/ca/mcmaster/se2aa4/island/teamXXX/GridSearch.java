@@ -34,7 +34,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
     // Search Status Flags
     private boolean turnRequested;
     private boolean echoRequested;
-    private boolean landAhead; // Track if there is land ahead! 
+    private boolean sweepDirectionChangeRequested;
+    private boolean justFinishedTurning; // Have we just finished a turn? 
     private boolean creekFound;
     private boolean siteFound;
 
@@ -115,7 +116,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
         siteFound = false;
         turnRequested = false;
         echoRequested = false;
-        landAhead = true;
+        justFinishedTurning = false;
+        sweepDirectionChangeRequested = false;
         creekId = null;
         siteId = null;
     }
@@ -168,7 +170,10 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * Switch decision modes based on the results of the previous action.
      */
     public Mode switchMode() {
-        if (turnRequested) {
+        if (sweepDirectionChangeRequested) {
+            return getChangeSweep();
+        }
+        else if (turnRequested) {
             return getTurn();
         }
         else if (echoRequested) {
@@ -189,7 +194,32 @@ public class GridSearch implements Searcher, ResponseProcessor{
     }
 
     /**
-     * Return the next 
+     * Change sweep direction process
+     */
+    private Mode getChangeSweep() {
+        if (mode == Mode.RIGHT_TURN_B || mode == Mode.LEFT_TURN_B) {
+            logger.info("Sweep direction change ended. SWITCH TO FLY.");
+            sweepDirectionChangeRequested = false;
+            return Mode.FLY;
+        }
+        else if (mode == Mode.FLY) {
+            if (previousTurn == Mode.LEFT_TURN_A) {
+                return Mode.LEFT_TURN_B;
+            }
+            else {
+                return Mode.RIGHT_TURN_B;
+            }
+        }
+        else if (mode == Mode.RIGHT_TURN_A || mode == Mode.LEFT_TURN_A) {
+            return Mode.FLY;
+        }
+        else {
+            return previousTurn; // Begin the CIRCLE BACK process
+        }
+    }
+
+    /**
+     * Return the next move when turning
      */
     private Mode getTurn() {
         if (mode == Mode.LEFT_TURN_A) {
@@ -202,6 +232,7 @@ public class GridSearch implements Searcher, ResponseProcessor{
             logger.info("TURN COMPLETE. Proceed to FLY.");
             previousTurn = switchTurns();
             turnRequested = false;
+            justFinishedTurning = true;
             return Mode.FLY;
         }
         else if (previousTurn == Mode.LEFT_TURN_A) {
@@ -279,12 +310,16 @@ public class GridSearch implements Searcher, ResponseProcessor{
             logger.info("Found: {}", found);
             if ("GROUND".equals(found)) {
                 logger.info("There is ground ahead. Proceed forwards");
-                landAhead = true;
+                justFinishedTurning = false;
             }
             else {
                 logger.info("There is NO GROUND AHEAD. TURN AROUND!");
-                landAhead = false;
                 turnRequested = true;
+
+                if (justFinishedTurning) {
+                    logger.info("======== ALERT ========\n JUST REACHED THE END \n========================");
+                    sweepDirectionChangeRequested = true;
+                }
             }
         }
         else {
@@ -300,10 +335,17 @@ public class GridSearch implements Searcher, ResponseProcessor{
         logger.info("Evaluating SCAN data");
         String results;
         
-        results = searchFor(data, "creeks", creekFound);
-        if (results != null) creekId = results;
-        results = searchFor(data, "sites", creekFound);
-        if (results != null) siteId = results;
+        results = searchFor(data, "creeks");
+        if (results != null) {
+            creekId = results;
+            creekFound = true;
+        }
+
+        results = searchFor(data, "sites");
+        if (results != null) {
+            siteId = results;
+            siteFound = true;
+        }
 
         //Check biomes and change course if the drone is surrounded by water.         
         if (data.has("biomes")) {
@@ -326,20 +368,25 @@ public class GridSearch implements Searcher, ResponseProcessor{
                 logger.info("SURROUNDED BY WATER. REQUEST AN ECHO");
                 echoRequested = true;
             }
+            else {
+                justFinishedTurning = false; // On ground. Did not just finish turning.
+            }
+        }
+        else {
+            justFinishedTurning = false; // On ground. Did not just finish turning.
         }
     }
 
     /**
      * Search for an item in a JSON array
      */
-    public String searchFor(JSONObject data, String area, boolean statusFlag) {
+    public String searchFor(JSONObject data, String area) {
         if (data.has(area)) {
             logger.info("Check for " + area);
             JSONArray areaReport = data.getJSONArray(area);
 
             if (areaReport.length() != 0) {
                 logger.info("============ DISCOVERY: " + area + " HAS BEEN FOUND ============");
-                statusFlag = true;
                 return (String)areaReport.get(0);
             }
             logger.info("NO " + area + " HAVE BEEN FOUND");
