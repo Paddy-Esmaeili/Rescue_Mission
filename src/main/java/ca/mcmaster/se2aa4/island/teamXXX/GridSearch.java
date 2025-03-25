@@ -33,11 +33,10 @@ public class GridSearch implements Searcher, ResponseProcessor{
 
     // Search Status Flags
     private boolean turnRequested;
-    private boolean onLand; // Track if the drone is on land after a turn
+    private boolean echoRequested;
+    private boolean landAhead; // Track if there is land ahead! 
     private boolean creekFound;
     private boolean siteFound;
-
-    private int maxIslandHeight; //Maximum height of island.
 
     // Storage for CREEK IDS
     private String creekIDs;
@@ -55,13 +54,14 @@ public class GridSearch implements Searcher, ResponseProcessor{
     private enum Mode {
         FLY("action", "fly", "FLY"),
         SCAN("action", "scan", "SCAN"),
-        RIGHT_TURN("action", "heading", "RIGHT TURN"),
-        LEFT_TURN("action", "heading", "LEFT TURN"),
-        STOP ("action", "stop", "STOP");
+        RIGHT_TURN_A("action", "heading", "RIGHT TURN A"),
+        RIGHT_TURN_B("action", "heading", "RIGHT TURN B"),
+        LEFT_TURN_A("action", "heading", "LEFT TURN A"),
+        LEFT_TURN_B("action", "heading", "LEFT TURN B"),
+        ECHO ("action", "echo", "ECHO");
 
         private String type; // Action key
         private String item; // Action item
-        private int iterations; // Number of times this action has been made consecutively
         private String str; // Text for console logging
         private static final Logger logger = LogManager.getLogger();
 
@@ -70,19 +70,10 @@ public class GridSearch implements Searcher, ResponseProcessor{
             this.type = type;
             this.item = item;
             this.str = str;
-            this.iterations = 0;
         }
 
         private String getString() {
             return str;
-        }
-
-        private void resetIterations() {
-            iterations = 0;
-        }
-
-        private int getIterations() {
-            return iterations;
         }
 
         /**
@@ -94,18 +85,19 @@ public class GridSearch implements Searcher, ResponseProcessor{
             decision.put(type, item);
 
             // Add parameters to decisions that require them
-            if (this == LEFT_TURN) {
-                logger.info("Selected Left Turn");
+            if (this == LEFT_TURN_A || this == LEFT_TURN_B) {
                 parameters.put("direction", direction.getLeftTurn().toString());
                 decision.put("parameters", parameters);
             }
-            else if (this == RIGHT_TURN) {
-                logger.info("Selected Right Turn");
+            else if (this == RIGHT_TURN_A || this == RIGHT_TURN_B) {
                 parameters.put("direction", direction.getRightTurn().toString());
                 decision.put("parameters", parameters);
             }
+            else if (this == ECHO) {
+                parameters.put("direction", direction.toString());
+                decision.put("parameters", parameters);
+            }
             
-            this.iterations++;
             return decision;
         }
 
@@ -117,13 +109,13 @@ public class GridSearch implements Searcher, ResponseProcessor{
     public GridSearch(FindIsland island) {
         logger.info("===== GRID SEARCH INSTANTIATED =====");
         direction = island.getLandDirection(); // Fetch directional data from island. 
-        previousTurn = Mode.RIGHT_TURN;
+        previousTurn = Mode.RIGHT_TURN_A;
         mode = Mode.SCAN;
         creekFound = false;
         siteFound = false;
         turnRequested = false;
-        maxIslandHeight = 2; //Maximum known island height
-        onLand = false;
+        echoRequested = false;
+        landAhead = true;
     }
 
     /**
@@ -161,32 +153,49 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public Mode switchMode() {
         if (turnRequested) {
-            if (mode.getIterations() == 2) {
-                logger.info("TURN COMPLETE. Proceed to FLY.");
-                mode.resetIterations();
-                previousTurn = switchTurns();
-                turnRequested = false;
-                return Mode.FLY;
-            } 
-            else if (previousTurn == Mode.LEFT_TURN) {
-                logger.info("PREVIOUSLY TURNED LEFT - TURN RIGHT.");
-                return Mode.RIGHT_TURN;
-            }
-            else {
-                logger.info("PREVIOUSLY TURNED RIGHT - TURN LEFT.");
-                return Mode.LEFT_TURN;
-            }
+            return getTurn();
+        }
+        else if (echoRequested) {
+            logger.info("RECIEVED ECHO REQUEST - ECHO");
+            return Mode.ECHO;
         }
         else if (mode == Mode.FLY) {
-                logger.info("FLIGHT COMPLETE - SCAN.");
-                return Mode.SCAN;
+            logger.info("FLIGHT COMPLETE - SCAN.");
+            return Mode.SCAN;
         }
-        else if (mode == Mode.SCAN) {
-            logger.info("Scan evaluation complete. Proceed to FLY.");
+        else if (mode == Mode.SCAN || mode == Mode.ECHO) {
+            logger.info("Scan or echo evaluation complete. Proceed to FLY.");
             return Mode.FLY;
         }
-        else 
+        else {
             return null;
+        }
+    }
+
+    /**
+     * Return the next 
+     */
+    private Mode getTurn() {
+        if (mode == Mode.LEFT_TURN_A) {
+            return Mode.LEFT_TURN_B;
+        }
+        else if (mode == Mode.RIGHT_TURN_A) {
+            return Mode.RIGHT_TURN_B;
+        }
+        else if (mode == Mode.LEFT_TURN_B || mode == Mode.RIGHT_TURN_B) {
+            logger.info("TURN COMPLETE. Proceed to FLY.");
+            previousTurn = switchTurns();
+            turnRequested = false;
+            return Mode.FLY;
+        }
+        else if (previousTurn == Mode.LEFT_TURN_A) {
+            logger.info("PREVIOUSLY TURNED LEFT - TURN RIGHT.");
+            return Mode.RIGHT_TURN_A;
+        }
+        else {
+            logger.info("PREVIOUSLY TURNED RIGHT - TURN LEFT.");
+            return Mode.LEFT_TURN_A;
+        }
     }
 
     /**
@@ -194,10 +203,10 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * Return the direction to be changed to.
      */
     public DirectionStrategy updateDirection() {
-            if (mode == Mode.LEFT_TURN) {
+            if (mode == Mode.LEFT_TURN_A || mode == Mode.LEFT_TURN_B) {
                 return direction.getLeftTurn();
             }
-            else if (mode == Mode.RIGHT_TURN) {
+            else if (mode == Mode.RIGHT_TURN_A || mode == Mode.RIGHT_TURN_B) {
                 return direction = direction.getRightTurn();
             }
             else {
@@ -210,11 +219,11 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     private Mode switchTurns() {
         // Log previous turn
-        if (previousTurn == Mode.LEFT_TURN) {
-            return Mode.RIGHT_TURN;
+        if (previousTurn == Mode.LEFT_TURN_A) {
+            return Mode.RIGHT_TURN_A;
         }
         else {
-            return Mode.LEFT_TURN;
+            return Mode.LEFT_TURN_A;
         }
     }
 
@@ -237,7 +246,35 @@ public class GridSearch implements Searcher, ResponseProcessor{
         if (mode == Mode.SCAN) {
             checkScan(extraInfo);
         }
+        else if (mode == Mode.ECHO) {
+            checkEcho(extraInfo);
+        }
         mode = switchMode();
+    }
+
+    /**
+     * Evaluate the results of an echo.
+     */
+    private void checkEcho(JSONObject data) {
+        logger.info("Evaluating ECHO data");
+
+        if (data.has("found")) {
+            String found = data.getString("found");
+            logger.info("Found: {}", found);
+            if ("GROUND".equals(found)) {
+                logger.info("There is ground ahead. Proceed forwards");
+                landAhead = true;
+            }
+            else {
+                logger.info("There is NO GROUND AHEAD. TURN AROUND!");
+                landAhead = false;
+                turnRequested = true;
+            }
+        }
+        else {
+            logger.warn("ECHO does not have FOUND field");
+        }
+        echoRequested = false; // Request complete. Reset.
     }
 
     /**
@@ -266,31 +303,9 @@ public class GridSearch implements Searcher, ResponseProcessor{
         // If WATER is the only biome, turn around.
         if (biomes.length() == 1 && !turnRequested) {
             if (biomes.get(0).equals("OCEAN")) {
-                logger.info("SURROUNDED BY WATER.");
-                int tilesMoved = mode.getIterations(); // How many tiles have we travelled in a straight line?
-
-                // Decide if a turn is required. 
-                if (onLand) {
-                    // We were on land previously and just encountered water! Turn around.
-                    turnRequested = true;
-                    onLand = false;
-
-                    // If the tiles moved is greater than the previously known island height
-                    if (tilesMoved > maxIslandHeight) {
-                        maxIslandHeight = tilesMoved;
-                    }
-                    mode.resetIterations();
-                }
-                //If we have surpassed the island height by going straight we must make a u-turn
-                else if (tilesMoved > maxIslandHeight) {
-                    turnRequested = true;
-                    previousTurn = switchTurns(); // Swap turns. Turn in opposite direction.
-                }
+                logger.info("SURROUNDED BY WATER. REQUEST AN ECHO");
+                echoRequested = true;
             }
-        }
-        else {
-            // We are not on water. Thus, we are on land. 
-            onLand = true;
         }
     }
 

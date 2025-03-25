@@ -14,7 +14,7 @@ import org.json.JSONTokener;
 
 public class Battery {
     public static final int BATTERY_CAPACITY = 35000;
-    public static final int LOW_BATTERY = 29000;
+    public static final int LOW_BATTERY = 32500;
     public int batteryLevel;
     private static final Logger logger = LogManager.getLogger();
 

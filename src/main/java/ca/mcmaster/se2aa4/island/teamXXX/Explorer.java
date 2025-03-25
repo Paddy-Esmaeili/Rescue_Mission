@@ -73,6 +73,7 @@ public class Explorer implements IExplorerRaid {
     }
 
     public String deliverFinalReport() {
+        logger.info("DELIVERING FINAL REPORT.");
         return "no creek found";
     }
 }
