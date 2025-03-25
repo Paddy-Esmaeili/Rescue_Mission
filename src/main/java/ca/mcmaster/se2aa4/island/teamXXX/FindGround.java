@@ -12,13 +12,10 @@ import eu.ace_design.island.bot.IExplorerRaid;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-<<<<<<< HEAD
 //Locates land and calls FindIsland to fly towards it. 
 //Flies East 3 tiles at the time and echoes all directions until a ground cell is detected. 
-
-=======
 //Locates land and then activates creek searching. 
->>>>>>> 8c133591dfce9fb947e8c4443945577dae13c8b0
+
 public class FindGround implements Searcher, ResponseProcessor {
 
     private static final Logger logger = LogManager.getLogger();
