@@ -6,15 +6,19 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+// Test class for FindIsland
+//Provides testable values 
+//Debugging 
+
 class FindIslandTest {
 
-    private FindGroundMock findGround;    //Passing predefined values to FindGroundMock
     private FindIsland findIsland;
+    private FindGroundMock findGround; 
 
     @BeforeEach
     void setUp() {
-        findGround = new FindGroundMock();
-        findIsland = new FindIsland(findGround);
+        findGround = new FindGroundMock(); 
+        findIsland = findGround.createFindIsland();
     }
 
     @Test
@@ -41,14 +45,20 @@ class FindIslandTest {
 
     //Mock class to provide testable values
     private static class FindGroundMock extends FindGround {
-        @Override
-        public int getGroundRange() {
-            return 3; //Ground is located 3 tiles ahead
+
+        int groundRange; 
+        boolean landFound; 
+        DirectionStrategy landDirection;
+
+       public FindGroundMock(){
+            landFound = true; 
+            groundRange = 3; 
+            landDirection = new North();      
+        }
+        public FindIsland createFindIsland() {
+            return new FindIsland(groundRange, landDirection);
         }
 
-        @Override
-        public DirectionStrategy getLandDirection() {
-            return new North(); //The direction of the first ground cell is North. 
-        }
     }
+
 }

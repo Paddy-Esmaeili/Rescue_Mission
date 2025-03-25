@@ -19,16 +19,13 @@ class FindGroundTest {
     @BeforeEach
     void setUp() {
         findGround = new FindGround();
-        findIsland = new FindIsland(findGround); 
     }
 
     @Test
     void testInitialValues() {
         assertFalse(findGround.isLandFound());
         assertFalse(findGround.isStopIssued());
-        assertEquals(-1, findGround.getGroundRange());
         assertFalse(findGround.isFlyingEast());
-        assertNull(findGround.getLandDirection());
 
     }
 
@@ -46,10 +43,9 @@ class FindGroundTest {
     
         findGround.processResponse(responseString);
 
-        System.out.println("isLandFound: " + findGround.isLandFound());
-        System.out.println("isFlyingEast: " + findGround.isFlyingEast());
     
         assertFalse(findGround.isLandFound());
+        assertFalse(findGround.isFlyingEast());
 
     }
 
@@ -62,7 +58,6 @@ class FindGroundTest {
         findGround.processResponse(responseString);
 
         assertTrue(findGround.isLandFound());
-        assertEquals(2, findGround.getGroundRange());
 
     }
 }
