@@ -27,14 +27,17 @@ import ca.mcmaster.se2aa4.island.teamXXX.Direction;
 public class GridSearch implements Searcher, ResponseProcessor{
 
     private static final Logger logger = LogManager.getLogger(); 
-    private DirectionStrategy direction; 
+    private DirectionStrategy direction; // The direction the drone is CURRENTLY FACING
     private Mode mode; // Action modes.
-    private Direction scanDirection;
+    private Mode previousTurn; // The Turn Direction the Drone Previously Made
 
     // Search Status Flags
     private boolean turnRequested;
+    private boolean onLand; // Track if the drone is on land after a turn
     private boolean creekFound;
     private boolean siteFound;
+
+    private int maxIslandHeight; //Maximum height of island.
 
     // Storage for CREEK IDS
     private String creekIDs;
@@ -50,24 +53,28 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * STOP - Send a signal to stop the game.
      */
     private enum Mode {
-        FLY("action", "fly", 3),
-        SCAN("action", "scan",1),
-        RIGHT_TURN("action", "heading",2),
-        LEFT_TURN("action", "heading",2),
-        STOP ("action", "stop",1);
+        FLY("action", "fly", "FLY"),
+        SCAN("action", "scan", "SCAN"),
+        RIGHT_TURN("action", "heading", "RIGHT TURN"),
+        LEFT_TURN("action", "heading", "LEFT TURN"),
+        STOP ("action", "stop", "STOP");
 
         private String type; // Action key
         private String item; // Action item
         private int iterations; // Number of times this action has been made consecutively
-        private int maxIterations; // Number of times this action has been made consecutively
+        private String str; // Text for console logging
         private static final Logger logger = LogManager.getLogger();
 
         // Construct modes
-        Mode(String type, String item, int maxIterations) {
+        Mode(String type, String item, String str) {
             this.type = type;
             this.item = item;
-            this.maxIterations = maxIterations;
+            this.str = str;
             this.iterations = 0;
+        }
+
+        private String getString() {
+            return str;
         }
 
         private void resetIterations() {
@@ -108,14 +115,27 @@ public class GridSearch implements Searcher, ResponseProcessor{
      * Instantiate grid search.
      */
     public GridSearch(FindIsland island) {
-        logger.info("Instantiating Grid Search. MODE: SCAN");
+        logger.info("===== GRID SEARCH INSTANTIATED =====");
         direction = island.getLandDirection(); // Fetch directional data from island. 
-        scanDirection = Direction.EAST;
+        previousTurn = Mode.RIGHT_TURN;
         mode = Mode.SCAN;
         creekFound = false;
         siteFound = false;
         turnRequested = false;
+        maxIslandHeight = 2; //Maximum known island height
+        onLand = false;
+    }
 
+    /**
+     * Exists for console logging. 
+     * Prints the status of the grid search.
+     */
+    private void printStatus(JSONObject decision) {
+        logger.info("===== GRID SEARCH ====="
+                    + "\n\t\tDIRECTION - " + direction.toString() 
+                    + "\n\t\tPREVIOUS TURN - " + previousTurn.getString()
+                    + "\n\t\tACTION MODE - " + mode.getString()
+                    + "\n\t\tDecision: {}", decision.toString());
     }
 
     /**
@@ -131,7 +151,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public JSONObject getDecision() {
         JSONObject decision = mode.getDecision(direction);
-        logger.info("Decision: {}", decision.toString());
+        direction = updateDirection();
+        printStatus(decision);
         return decision;
     }
 
@@ -140,35 +161,61 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public Mode switchMode() {
         if (turnRequested) {
-            logger.info("MAKING. TURN DIRECTION: " + scanDirection.toString());
             if (mode.getIterations() == 2) {
+                logger.info("TURN COMPLETE. Proceed to FLY.");
                 mode.resetIterations();
+                previousTurn = switchTurns();
                 turnRequested = false;
                 return Mode.FLY;
             } 
-            else if (scanDirection == Direction.EAST) {
+            else if (previousTurn == Mode.LEFT_TURN) {
+                logger.info("PREVIOUSLY TURNED LEFT - TURN RIGHT.");
                 return Mode.RIGHT_TURN;
             }
             else {
+                logger.info("PREVIOUSLY TURNED RIGHT - TURN LEFT.");
                 return Mode.LEFT_TURN;
             }
         }
         else if (mode == Mode.FLY) {
-            if (mode.getIterations() == 2){
-                mode.resetIterations();
+                logger.info("FLIGHT COMPLETE - SCAN.");
                 return Mode.SCAN;
-            }
-            else {
-                return Mode.FLY;
-            }  
         }
         else if (mode == Mode.SCAN) {
-            logger.info("Scan evaluation complete. Proceeding in CONTINUE mode");
-            mode.resetIterations();
+            logger.info("Scan evaluation complete. Proceed to FLY.");
             return Mode.FLY;
         }
         else 
             return null;
+    }
+
+    /**
+     * Update the stored value of the drone's heading if it is changed. 
+     * Return the direction to be changed to.
+     */
+    public DirectionStrategy updateDirection() {
+            if (mode == Mode.LEFT_TURN) {
+                return direction.getLeftTurn();
+            }
+            else if (mode == Mode.RIGHT_TURN) {
+                return direction = direction.getRightTurn();
+            }
+            else {
+                return direction;
+            }
+    }
+
+    /**
+     * Return the alternate turn value
+     */
+    private Mode switchTurns() {
+        // Log previous turn
+        if (previousTurn == Mode.LEFT_TURN) {
+            return Mode.RIGHT_TURN;
+        }
+        else {
+            return Mode.LEFT_TURN;
+        }
     }
 
     /**
@@ -190,7 +237,6 @@ public class GridSearch implements Searcher, ResponseProcessor{
         if (mode == Mode.SCAN) {
             checkScan(extraInfo);
         }
-
         mode = switchMode();
     }
 
@@ -202,19 +248,49 @@ public class GridSearch implements Searcher, ResponseProcessor{
 
         creekIDs = searchFor(data, "creeks", creekFound);
         siteIDs = searchFor(data, "sites", creekFound);
-
-        //Check biomes and change course if the drone is surrounded by water. 
+        //Check biomes and change course if the drone is surrounded by water.         
         if (data.has("biomes")) {
             logger.info("Evaluating surroundings.");
             JSONArray biomes = data.getJSONArray("biomes");
-            
-            // If WATER is the only biome, turn around.
-            if (biomes.length() == 1) {
-                if (biomes.get(0).equals("OCEAN")) {
-                    logger.info("SURROUNDED BY WATER. COMMENCE U-TURN");
+            evaluateBiomes(biomes);
+        }
+    }
+
+    /**
+     * Evaluate the biomes
+     * This method is very long. 
+     * Consider refactoring in the future. 
+     * This violates open-closed. 
+     */
+    public void evaluateBiomes(JSONArray biomes) {
+        // If WATER is the only biome, turn around.
+        if (biomes.length() == 1 && !turnRequested) {
+            if (biomes.get(0).equals("OCEAN")) {
+                logger.info("SURROUNDED BY WATER.");
+                int tilesMoved = mode.getIterations(); // How many tiles have we travelled in a straight line?
+
+                // Decide if a turn is required. 
+                if (onLand) {
+                    // We were on land previously and just encountered water! Turn around.
                     turnRequested = true;
+                    onLand = false;
+
+                    // If the tiles moved is greater than the previously known island height
+                    if (tilesMoved > maxIslandHeight) {
+                        maxIslandHeight = tilesMoved;
+                    }
+                    mode.resetIterations();
+                }
+                //If we have surpassed the island height by going straight we must make a u-turn
+                else if (tilesMoved > maxIslandHeight) {
+                    turnRequested = true;
+                    previousTurn = switchTurns(); // Swap turns. Turn in opposite direction.
                 }
             }
+        }
+        else {
+            // We are not on water. Thus, we are on land. 
+            onLand = true;
         }
     }
 
