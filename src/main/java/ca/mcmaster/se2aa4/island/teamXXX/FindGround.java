@@ -12,8 +12,10 @@ import eu.ace_design.island.bot.IExplorerRaid;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-//Locates land and then activates creek searching. 
-public class FindGround implements Searcher, ResponseProcessor{
+//Locates land and calls FindIsland to fly towards it. 
+//Flies East 3 tiles at the time and echoes all directions until a ground cell is detected. 
+
+public class FindGround implements Searcher, ResponseProcessor {
 
     private static final Logger logger = LogManager.getLogger();
     private FindIsland findIsland;
@@ -30,20 +32,18 @@ public class FindGround implements Searcher, ResponseProcessor{
     private int outOfRangeCount = 0;
     private final int MAX_OUT_OF_RANGE = 3;
     private int groundRange = -1;  // Stores how many tiles ahead the ground cell is when found.
-    
-    // Getter methods
-    public int getGroundRange() {
-        return groundRange;
+
+    public FindIsland createFindIsland() {
+        if (!landFound) {
+            throw new IllegalStateException("Error: No island detected.");
+        }
+        return new FindIsland(groundRange, landDirection);
     }
 
+    //getter method
     public FindIsland getFindIsland() {
         return findIsland;
     }
-
-    public DirectionStrategy getLandDirection() {
-        return landDirection;
-    }
-
 
     public boolean isComplete() {
         return landFound && groundRange != -1;
@@ -147,9 +147,10 @@ public class FindGround implements Searcher, ResponseProcessor{
                 isFlyingEast = false;
                 outOfRangeCount = 0;
                 tilesFlown = 0;
-                findIsland = new FindIsland(this);
+                findIsland = new FindIsland(groundRange, landDirection);
             }
         }
     }
 }
+
 

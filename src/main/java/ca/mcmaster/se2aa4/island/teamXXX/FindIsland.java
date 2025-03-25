@@ -18,17 +18,15 @@ import ca.mcmaster.se2aa4.island.teamXXX.Direction;
 
 public class FindIsland implements Searcher {
     private static final Logger logger = LogManager.getLogger();
-    private final FindGround findGround;
     private int tilesToLand;
     private DirectionStrategy direction;
     private boolean movingToLand = true;
     private boolean headingChanged = false; //Tracks changes in the heading 
     private GridSearch gridSearch;
 
-    public FindIsland(FindGround findGround) {
-        this.findGround = findGround;
-        this.tilesToLand = findGround.getGroundRange();
-        this.direction = findGround.getLandDirection();
+    public FindIsland(int tilesToLand, DirectionStrategy direction) {
+        this.tilesToLand = tilesToLand;
+        this.direction = direction;
     }
 
     public GridSearch getGridSearch(){
@@ -73,3 +71,4 @@ public class FindIsland implements Searcher {
         return decision;
     }
 }
+
