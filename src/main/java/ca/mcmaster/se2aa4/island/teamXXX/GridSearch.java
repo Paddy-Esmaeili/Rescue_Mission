@@ -39,8 +39,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
     private boolean siteFound;
 
     // Storage for CREEK IDS
-    private String creekIDs;
-    private String siteIDs;
+    private String creekId;
+    private String siteId;
 
     /**
      * Mode
@@ -116,6 +116,8 @@ public class GridSearch implements Searcher, ResponseProcessor{
         turnRequested = false;
         echoRequested = false;
         landAhead = true;
+        creekId = null;
+        siteId = null;
     }
 
     /**
@@ -146,6 +148,20 @@ public class GridSearch implements Searcher, ResponseProcessor{
         direction = updateDirection();
         printStatus(decision);
         return decision;
+    }
+
+    /**
+     * Return creek ID
+     */
+    public String getCreekId() {
+        return creekId;
+    }
+
+    /**
+     * Return site ID
+     */
+    public String getSiteId() {
+        return siteId;
     }
 
     /**
@@ -282,9 +298,13 @@ public class GridSearch implements Searcher, ResponseProcessor{
      */
     public void checkScan(JSONObject data) {
         logger.info("Evaluating SCAN data");
+        String results;
+        
+        results = searchFor(data, "creeks", creekFound);
+        if (results != null) creekId = results;
+        results = searchFor(data, "sites", creekFound);
+        if (results != null) siteId = results;
 
-        creekIDs = searchFor(data, "creeks", creekFound);
-        siteIDs = searchFor(data, "sites", creekFound);
         //Check biomes and change course if the drone is surrounded by water.         
         if (data.has("biomes")) {
             logger.info("Evaluating surroundings.");

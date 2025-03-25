@@ -74,6 +74,18 @@ public class Explorer implements IExplorerRaid {
 
     public String deliverFinalReport() {
         logger.info("DELIVERING FINAL REPORT.");
-        return "no creek found";
+        String finalReport;
+
+        if (searchMethod instanceof GridSearch) {
+            String creekId = ((GridSearch)searchMethod).getCreekId();
+            String siteId = ((GridSearch)searchMethod).getSiteId();
+            finalReport = new String("CREEK ID: " + creekId + " SITE ID: " + siteId);
+        }
+        else {
+            finalReport = "no creeks or sites found";
+        }
+
+        logger.info("\n===== FINAL REPORT =====\n" + finalReport + "\n========================\n");
+        return finalReport;
     }
 }
